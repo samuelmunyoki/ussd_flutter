@@ -200,8 +200,22 @@ public class USSDServiceKT extends AccessibilityService {
         for (AccessibilityNodeInfo leaf : getLeaves(event)) {
             count++;
             if (count == index) {
-                Log.d("TRACE:", "Clicking on Button " + String.valueOf(index));
-                leaf.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+
+                if (leaf.isClickable()) {
+                    Log.d("TRACE:", "Clicking on Button " + count);
+                    leaf.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                } else {
+                    Log.d("TRACE:", "Button is not clickable, trying parent");
+                    AccessibilityNodeInfo parent = leaf.getParent();
+                    if (parent != null && parent.isClickable()) {
+                        parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                        Log.d("TRACE:", "Clicked on parent");
+                    } else {
+                        Log.d("TRACE:", "Neither button nor parent is clickable");
+                    }
+                }
+//                Log.d("TRACE:", "Clicking on Button " + String.valueOf(index));
+//                leaf.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
             if (leaf.getClassName().toString().toLowerCase().contains("button")) {
                 Log.d("TRACE:", "Button found");
