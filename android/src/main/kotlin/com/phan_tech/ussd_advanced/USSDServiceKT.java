@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.flutter.Log;
-import timber.log.Timber
+import timber.log.Timber;
 
 
 /**
