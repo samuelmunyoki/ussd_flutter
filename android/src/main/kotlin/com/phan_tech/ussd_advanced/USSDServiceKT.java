@@ -200,7 +200,7 @@ public class USSDServiceKT extends AccessibilityService {
         for (AccessibilityNodeInfo leaf : getLeaves(event)) {
             count++;
             if (count == index) {
-                Log.d("TRACE:", "Clicking on Button " + index.toString());
+                Log.d("TRACE:", "Clicking on Button " + String.valueOf(index));
                 leaf.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
             if (leaf.getClassName().toString().toLowerCase().contains("button")) {
