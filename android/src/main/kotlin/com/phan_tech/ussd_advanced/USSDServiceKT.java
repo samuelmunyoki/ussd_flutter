@@ -195,6 +195,7 @@ public class USSDServiceKT extends AccessibilityService {
      * @param index button's index
      */
     protected static void clickOnButton(AccessibilityEvent event, int index) {
+        Log("TRACE:", "Clicing on Button");
         int count = -1;
         for (AccessibilityNodeInfo leaf : getLeaves(event)) {
             count++;
@@ -202,7 +203,7 @@ public class USSDServiceKT extends AccessibilityService {
                 leaf.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
             if (leaf.getClassName().toString().toLowerCase().contains("button")) {
-
+                Log("TRACE:", "Button found");
             }
         }
     }
