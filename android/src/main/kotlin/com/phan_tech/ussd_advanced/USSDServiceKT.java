@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.flutter.Log;
-import timber.log.Timber;
+import android.util.Log;
 
 
 /**
@@ -43,7 +43,7 @@ public class USSDServiceKT extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         USSDServiceKT.event = event;
         USSDController ussd = USSDController.INSTANCE;
-        Timber.d(String.format(
+        Log.d(String.format(
                 "onAccessibilityEvent: [type] %s [class] %s [package] %s [time] %s [text] %s",
                 event.getEventType(), event.getClassName(), event.getPackageName(),
                 event.getEventTime(), event.getText()));
@@ -67,11 +67,11 @@ public class USSDServiceKT extends AccessibilityService {
             clickOnButton(event, 1);
             USSDController.callbackInvoke.over(response != null ? response : "");
         } else if (isUSSDWidget(event)) {
-            Timber.d("catch a USSD widget/Window");
+            Log.d("catch a USSD widget/Window");
             if (notInputText(event)) {
                 // not more input panels / LAST MESSAGE
                 // sent 'OK' button
-                Timber.d("No inputText found & closing USSD process");
+                Log.d("No inputText found & closing USSD process");
                 clickOnButton(event, 0);
                 ussd.stopRunning();
                 USSDController.callbackInvoke.over(response != null ? response : "");
@@ -99,8 +99,8 @@ public class USSDServiceKT extends AccessibilityService {
         try {
             clickOnButton(ev, 1);
         } catch (java.lang.Exception e) {
-            Timber.d("Error sending USSD");
-            Timber.d(e.getMessage());
+            Log.d("Error sending USSD");
+            Log.d(e.getMessage());
         }
     }
 
@@ -230,7 +230,7 @@ public class USSDServiceKT extends AccessibilityService {
      */
     @Override
     public void onInterrupt() {
-//        Timber.d( "onInterrupt");
+//        Log.d( "onInterrupt");
     }
 
     /**
@@ -239,6 +239,6 @@ public class USSDServiceKT extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-//        Timber.d("onServiceConnected");
+//        Log.d("onServiceConnected");
     }
 }
