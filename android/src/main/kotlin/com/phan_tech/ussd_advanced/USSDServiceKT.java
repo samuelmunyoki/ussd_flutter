@@ -55,6 +55,8 @@ public class USSDServiceKT extends AccessibilityService {
             List<CharSequence> res = event.getText();
             res.remove("SEND");
             res.remove("CANCEL");
+            res.remove("Send");
+            res.remove("Cancel");
             response = String.join("\n", res );
         }
         if (LoginView(event) && notInputText(event)) {
