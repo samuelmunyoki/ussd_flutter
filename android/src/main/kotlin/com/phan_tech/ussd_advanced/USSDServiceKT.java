@@ -82,7 +82,6 @@ public class USSDServiceKT extends AccessibilityService {
                 else USSDController.callbackInvoke.responseInvoke(event);
             }
         }
-
     }
 
     /**
