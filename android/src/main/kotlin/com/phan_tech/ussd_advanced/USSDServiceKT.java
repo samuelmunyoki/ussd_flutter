@@ -43,10 +43,10 @@ public class USSDServiceKT extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         USSDServiceKT.event = event;
         USSDController ussd = USSDController.INSTANCE;
-        Log.d(TAG, String.format(
-                "onAccessibilityEvent: [type] %s [class] %s [package] %s [time] %s [text] %s",
-                event.getEventType(), event.getClassName(), event.getPackageName(),
-                event.getEventTime(), event.getText()));
+//        Log.d(TAG, String.format(
+//                "onAccessibilityEvent: [type] %s [class] %s [package] %s [time] %s [text] %s",
+//                event.getEventType(), event.getClassName(), event.getPackageName(),
+//                event.getEventTime(), event.getText()));
         if (!ussd.isRunning()) {
             return;
         }
@@ -67,11 +67,11 @@ public class USSDServiceKT extends AccessibilityService {
             clickOnButton(event, 1);
             USSDController.callbackInvoke.over(response != null ? response : "");
         } else if (isUSSDWidget(event)) {
-            Log.d(TAG, "catch a USSD widget/Window");
+//            Log.d(TAG, "catch a USSD widget/Window");
             if (notInputText(event)) {
                 // not more input panels / LAST MESSAGE
                 // sent 'OK' button
-                Log.d(TAG, "No inputText found & closing USSD process");
+//                Log.d(TAG, "No inputText found & closing USSD process");
                 clickOnButton(event, 0);
                 ussd.stopRunning();
                 USSDController.callbackInvoke.over(response != null ? response : "");
@@ -99,8 +99,8 @@ public class USSDServiceKT extends AccessibilityService {
         try {
             clickOnButton(ev, 1);
         } catch (java.lang.Exception e) {
-            Log.d(TAG, "Error sending USSD");
-            Log.d(TAG, e.getMessage());
+//            Log.d(TAG, "Error sending USSD");
+//            Log.d(TAG, e.getMessage());
         }
     }
 
@@ -196,29 +196,29 @@ public class USSDServiceKT extends AccessibilityService {
      */
     protected static void clickOnButton(AccessibilityEvent event, int index) {
         if (event == null || event.getSource() == null) {
-            Log.d("TRACE:", "Event or Source is null");
+//            Log.d("TRACE:", "Event or Source is null");
             return;
         }
 
         List<AccessibilityNodeInfo> leaves = getLeaves(event);
-        Log.d("TRACE:", "Total nodes found: " + leaves.size());
+//        Log.d("TRACE:", "Total nodes found: " + leaves.size());
 
         int count = 0;
         for (AccessibilityNodeInfo leaf : leaves) {
             if (leaf.getClassName() != null && leaf.getClassName().toString().toLowerCase().contains("button")) {
-                Log.d("TRACE:", "Button found at index " + count + ": " + leaf.getText());
+//                Log.d("TRACE:", "Button found at index " + count + ": " + leaf.getText());
                 if (count == index) {
                     if (leaf.isClickable()) {
-                        Log.d("TRACE:", "Clicking on Button " + count);
+//                        Log.d("TRACE:", "Clicking on Button " + count);
                         leaf.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                     } else {
-                        Log.d("TRACE:", "Button is not clickable, trying parent");
+//                        Log.d("TRACE:", "Button is not clickable, trying parent");
                         AccessibilityNodeInfo parent = leaf.getParent();
                         if (parent != null && parent.isClickable()) {
                             parent.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                            Log.d("TRACE:", "Clicked on parent");
+//                            Log.d("TRACE:", "Clicked on parent");
                         } else {
-                            Log.d("TRACE:", "Neither button nor parent is clickable");
+//                            Log.d("TRACE:", "Neither button nor parent is clickable");
                         }
                     }
                     return; // Exit after clicking
@@ -226,8 +226,7 @@ public class USSDServiceKT extends AccessibilityService {
                 count++;
             }
         }
-
-        Log.d("TRACE:", "No button clicked");
+//        Log.d("TRACE:", "No button clicked");
     }
 
     private static List<AccessibilityNodeInfo> getLeaves(AccessibilityEvent event) {
