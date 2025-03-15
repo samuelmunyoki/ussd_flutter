@@ -147,7 +147,8 @@ public class USSDServiceKT extends AccessibilityService {
             // Find the EditText field
             AccessibilityNodeInfo inputField = findInputField(source);
             if (inputField == null) {
-                return false;
+                Log.d(TAG, "Could not find input field");
+                return;
             }
 
             // Try multiple methods to set text
@@ -155,6 +156,7 @@ public class USSDServiceKT extends AccessibilityService {
 
             // Method 1: Direct focus and set text (modern approach)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Log.d(TAG, "Trying direct setText");
                 Bundle arguments = new Bundle();
                 arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
 
@@ -165,6 +167,7 @@ public class USSDServiceKT extends AccessibilityService {
 
             // Method 2: Clipboard fallback if direct set fails
             if (!success) {
+                Log.d(TAG, "Falling back to clipboard");
                 ClipboardManager clipboardManager = (ClipboardManager) USSDController
                         .INSTANCE.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
                 if (clipboardManager != null) {
@@ -178,6 +181,7 @@ public class USSDServiceKT extends AccessibilityService {
 
             // Method 3: Last resort - simulate input
             if (!success && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Log.d(TAG, "Simulating input");
                 inputField.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
                 Bundle args = new Bundle();
                 args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
@@ -189,10 +193,11 @@ public class USSDServiceKT extends AccessibilityService {
             CharSequence setText = inputField.getText();
             success = success || (setText != null && setText.toString().equals(data));
 
-            return success;
-
         } finally {
             source.recycle();
+            if(!success){
+                Log.d(TAG, "Failed to set text");
+            }
         }
 
     }
