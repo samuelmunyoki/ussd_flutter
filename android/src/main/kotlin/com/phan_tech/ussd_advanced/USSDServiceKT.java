@@ -122,19 +122,51 @@ public class USSDServiceKT extends AccessibilityService {
      * @param data  Any String
      */
     private static void setTextIntoField(AccessibilityEvent event, String data) {
-        Bundle arguments = new Bundle();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
+//        Bundle arguments = new Bundle();
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+//            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
+//        }
+//        for (AccessibilityNodeInfo leaf : getLeaves(event)) {
+//            if (leaf.getClassName().equals("android.widget.EditText")
+//                    && !leaf.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)) {
+//                ClipboardManager clipboardManager = ((ClipboardManager)  USSDController
+//                        .INSTANCE.getContext().getSystemService(Context.CLIPBOARD_SERVICE));
+//                if (clipboardManager != null) {
+//                    clipboardManager.setPrimaryClip(ClipData.newPlainText("text", data));
+//                }
+//                leaf.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+//            }
+//        }
+
+        if (event == null || event.getSource() == null) {
+            Log.d("TRACE:", "Event or Source is null");
+            return;
         }
-        for (AccessibilityNodeInfo leaf : getLeaves(event)) {
-            if (leaf.getClassName().equals("android.widget.EditText")
-                    && !leaf.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)) {
-                ClipboardManager clipboardManager = ((ClipboardManager)  USSDController
-                        .INSTANCE.getContext().getSystemService(Context.CLIPBOARD_SERVICE));
-                if (clipboardManager != null) {
-                    clipboardManager.setPrimaryClip(ClipData.newPlainText("text", data));
+
+        for (AccessibilityNodeInfo node : getLeaves(event)) {
+            if ("android.widget.EditText".equals(node.getClassName())) {
+                // Focus on the EditText field
+                if (node.isFocusable()) {
+                    node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
                 }
-                leaf.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+
+                // Clear existing text (if any)
+                Bundle clearTextArgs = new Bundle();
+                clearTextArgs.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
+                node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, clearTextArgs);
+
+                // Input the desired text
+                for (char c : data.toCharArray()) {
+                    int keyCode = KeyEvent.keyCodeFromString(String.valueOf(c).toUpperCase());
+                    long eventTime = SystemClock.uptimeMillis();
+                    KeyEvent keyEventDown = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0);
+                    KeyEvent keyEventUp = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0);
+                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                    node.getViewIdResourceName(); // Ensure the node is refreshed
+                    node.refresh();
+                    node.getText(); // Trigger text change
+                }
+                break;
             }
         }
     }
