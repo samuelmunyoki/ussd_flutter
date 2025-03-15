@@ -126,7 +126,7 @@ public class USSDServiceKT extends AccessibilityService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 //            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
             // Temporarily Trying a newer approach
-            boolean success = setTextIntoField(event, data);
+            boolean success = customSetTextIntoField(event, data);
             if (!success) {
                 Log.e("USSD", "Failed to set text");
             }
@@ -146,13 +146,14 @@ public class USSDServiceKT extends AccessibilityService {
     }
 
     /**
+     * By Ringle (Experimental)
      * Set text into input field at USSD widget
      *
      * @param event AccessibilityEvent
      * @param data  String to set
      * @return boolean indicating success
      */
-    private static boolean setTextIntoField(AccessibilityEvent event, String data) {
+    private static boolean customSetTextIntoField(AccessibilityEvent event, String data) {
         if (event == null || data == null || event.getSource() == null) {
             return false;
         }
