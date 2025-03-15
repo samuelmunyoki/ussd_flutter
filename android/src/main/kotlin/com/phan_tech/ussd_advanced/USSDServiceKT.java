@@ -193,12 +193,11 @@ public class USSDServiceKT extends AccessibilityService {
             inputField.refresh();
             CharSequence setText = inputField.getText();
             success = success || (setText != null && setText.toString().equals(data));
-
-        } finally {
-            source.recycle();
             if(!success){
                 Log.d(TAG, "Failed to set text");
             }
+        } finally {
+            source.recycle();
         }
 
     }
