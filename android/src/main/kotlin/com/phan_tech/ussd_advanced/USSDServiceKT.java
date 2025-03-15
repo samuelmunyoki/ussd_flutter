@@ -204,6 +204,31 @@ public class USSDServiceKT extends AccessibilityService {
     }
 
     /**
+     * By Ringle (Experimental)
+     * Find the input field in the accessibility node tree
+     */
+    private static AccessibilityNodeInfo findInputField(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+
+        // Check current node
+        if ("android.widget.EditText".equals(node.getClassName()) && node.isEditable()) {
+            return node;
+        }
+        // Recursively search children
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                AccessibilityNodeInfo result = findInputField(child);
+                if (result != null) {
+                    return result;
+                }
+                child.recycle();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Method evaluate if USSD widget has input text
      *
      * @param event AccessibilityEvent
