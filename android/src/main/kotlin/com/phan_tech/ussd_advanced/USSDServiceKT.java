@@ -124,12 +124,12 @@ public class USSDServiceKT extends AccessibilityService {
     private static void setTextIntoField(AccessibilityEvent event, String data) {
         Bundle arguments = new Bundle();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-//            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
+            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
             // Temporarily Trying a newer approach
-            boolean success = customSetTextIntoField(event, data);
-            if (!success) {
-                Log.e("USSD", "Failed to set text");
-            }
+//            boolean success = customSetTextIntoField(event, data);
+//            if (!success) {
+//                Log.e("USSD", "Failed to set text");
+//            }
         }
         for (AccessibilityNodeInfo leaf : getLeaves(event)) {
             if (leaf.getClassName().equals("android.widget.EditText")
