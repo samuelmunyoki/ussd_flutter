@@ -138,37 +138,63 @@ public class USSDServiceKT extends AccessibilityService {
 //            }
 //        }
 
-        if (event == null || event.getSource() == null) {
-            Log.d("TRACE:", "Event or Source is null");
-            return;
+        if (event == null || data == null || event.getSource() == null) {
+            return false;
         }
 
-        for (AccessibilityNodeInfo node : getLeaves(event)) {
-            if ("android.widget.EditText".equals(node.getClassName())) {
-                // Focus on the EditText field
-                if (node.isFocusable()) {
-                    node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-                }
-
-                // Clear existing text (if any)
-                Bundle clearTextArgs = new Bundle();
-                clearTextArgs.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
-                node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, clearTextArgs);
-
-                // Input the desired text
-                for (char c : data.toCharArray()) {
-                    int keyCode = KeyEvent.keyCodeFromString(String.valueOf(c).toUpperCase());
-                    long eventTime = SystemClock.uptimeMillis();
-                    KeyEvent keyEventDown = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0);
-                    KeyEvent keyEventUp = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0);
-                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    node.getViewIdResourceName(); // Ensure the node is refreshed
-                    node.refresh();
-                    node.getText(); // Trigger text change
-                }
-                break;
+        AccessibilityNodeInfo source = event.getSource();
+        try {
+            // Find the EditText field
+            AccessibilityNodeInfo inputField = findInputField(source);
+            if (inputField == null) {
+                return false;
             }
+
+            // Try multiple methods to set text
+            boolean success = false;
+
+            // Method 1: Direct focus and set text (modern approach)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Bundle arguments = new Bundle();
+                arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
+
+                // Ensure focus first
+                success = inputField.performAction(AccessibilityNodeInfo.ACTION_FOCUS) &&
+                        inputField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
+            }
+
+            // Method 2: Clipboard fallback if direct set fails
+            if (!success) {
+                ClipboardManager clipboardManager = (ClipboardManager) USSDController
+                        .INSTANCE.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboardManager != null) {
+                    clipboardManager.setPrimaryClip(ClipData.newPlainText("text", data));
+
+                    // Try focus + paste
+                    success = inputField.performAction(AccessibilityNodeInfo.ACTION_FOCUS) &&
+                            inputField.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+                }
+            }
+
+            // Method 3: Last resort - simulate input
+            if (!success && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                inputField.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+                Bundle args = new Bundle();
+                args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, data);
+                success = inputField.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args);
+            }
+
+            // Refresh the node and check if text was set
+            inputField.refresh();
+            CharSequence setText = inputField.getText();
+            success = success || (setText != null && setText.toString().equals(data));
+
+            return success;
+
+        } finally {
+            source.recycle();
         }
+
     }
 
     /**
