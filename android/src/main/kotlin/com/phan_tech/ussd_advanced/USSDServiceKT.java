@@ -139,7 +139,8 @@ public class USSDServiceKT extends AccessibilityService {
 //        }
 
         if (event == null || data == null || event.getSource() == null) {
-            return false;
+            Log.d(TAG, "Event or Source is null");
+            return;
         }
 
         AccessibilityNodeInfo source = event.getSource();
