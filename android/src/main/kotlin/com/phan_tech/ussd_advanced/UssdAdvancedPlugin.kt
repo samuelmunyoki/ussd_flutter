@@ -28,7 +28,6 @@
 // import io.flutter.plugin.common.StringCodec
 // import java.util.concurrent.CompletableFuture
 
-
 // /** UssdAdvancedPlugin */
 // class UssdAdvancedPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, BasicMessageChannel.MessageHandler<String?>  {
 //   /// The MethodChannel that will the communication between Flutter and native Android
@@ -38,19 +37,15 @@
 //   private lateinit var channel : MethodChannel
 //   private var context: Context? = null
 //   private var activity: Activity? = null
-//   private var senderActivity: Activity? = null
 //   private val ussdApi: USSDApi = USSDController
 //   private var event: AccessibilityEvent? = null
-
-
 //   private lateinit var basicMessageChannel: BasicMessageChannel<String>
-
 
 //   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
 //     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "method.com.phan_tech/ussd_advanced")
 //     channel.setMethodCallHandler(this)
 //     this.context = flutterPluginBinding.applicationContext
-//     basicMessageChannel  = BasicMessageChannel(
+//     basicMessageChannel = BasicMessageChannel(
 //       flutterPluginBinding.binaryMessenger,
 //       "message.com.phan_tech/ussd_advanced", StringCodec.INSTANCE
 //     )
@@ -65,11 +60,13 @@
 //   }
 
 //   override fun onDetachedFromActivityForConfigChanges() {
-//     senderActivity = null
+//     // Store activity reference for reattachment
+//     onDetachedFromActivity()
 //   }
 
 //   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
-//     senderActivity = binding.activity
+//     // Properly reattach to the activity
+//     onAttachedToActivity(binding)
 //   }
 
 //   private fun setListener(){
@@ -77,7 +74,7 @@
 //   }
 
 //   override fun onMessage(message: String?, reply: BasicMessageChannel.Reply<String?>) {
-//     if(message != null){
+//     if(message != null && event != null){
 //       USSDController.send2(message, event!!){
 //         event = AccessibilityEvent.obtain(it)
 //         try {
@@ -86,9 +83,12 @@
 //           }else{
 //             reply.reply(null)
 //           }
-//         } catch (e: Exception){}
-
+//         } catch (e: Exception){ 
+//           reply.reply(null)
+//         }
 //       }
+//     } else {
+//       reply.reply(null)
 //     }
 //   }
 
@@ -118,25 +118,35 @@
 //       }
 //     }
 
+//     // Check if context and activity are available
+//     if (context == null && activity != null) {
+//       context = activity?.applicationContext
+//     }
+
+//     if (context == null) {
+//       result.error("NO_CONTEXT", "Context is not available", null)
+//       return
+//     }
+
 //     when (call.method) {
 //       "hasPermissions" -> {
 //         result.success(hasPermissions())
-
 //       }
 //       "requestPermissions" -> {
+//         if (activity != null) {
 //           requestPermissions()
-//         result.success(null)
-
+//           result.success(null)
+//         } else {
+//           result.error("NO_ACTIVITY", "Activity is not available", null)
+//         }
 //       }
 //       "sendUssd" -> {
 //         result.success(defaultUssdService(code!!, subscriptionId))
-
 //       }
 //       "sendAdvancedUssd" -> {
 //         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
 //           val res = singleSessionUssd(code!!, subscriptionId)
 //           if(res != null){
-
 //             res.exceptionally { e: Throwable? ->
 //               if (e is RequestExecutionException) {
 //                 result.error(
@@ -146,35 +156,36 @@
 //                 result.error(RequestExecutionException.type, e?.message, null)
 //               }
 //               null
-//             }.thenAccept(result::success);
-
+//             }.thenAccept(result::success)
 //           }else{
-//             result.success(res);
+//             result.success(null)
 //           }
 //         }else{
 //           result.success(defaultUssdService(code!!, subscriptionId))
 //         }
 //       }
 //       "multisessionUssd" -> {
-
 //         // check permissions
-//         if(
-//           !hasPermissions()
-//         ){
-//           requestPermissions()
-//           result.success(null)
-
-
+//         if(!hasPermissions()){
+//           if (activity != null) {
+//             requestPermissions()
+//             result.success(null)
+//           } else {
+//             result.error("NO_ACTIVITY", "Activity is not available", null)
+//           }
 //         }else if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-//           multisessionUssd(code!!, subscriptionId, result)
-
+//           if (activity != null) {
+//             multisessionUssd(code!!, subscriptionId, result)
+//           } else {
+//             result.error("NO_ACTIVITY", "Activity is not available", null)
+//           }
 //         }else{
 //           result.success(defaultUssdService(code!!, subscriptionId))
 //         }
-
 //       }
 //       "multisessionUssdCancel" ->{
 //         multisessionUssdCancel()
+//         result.success(null)
 //       }
 //       else -> {
 //         result.notImplemented()
@@ -182,38 +193,41 @@
 //     }
 //   }
 
-//     private fun hasPermissions() : Boolean{
-//         return !(
-//                 ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED ||
-//                 ContextCompat.checkSelfPermission(this.context!!, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
-//                 !isAccessibilityServiceEnabled(this.context!!)
-//                 )
+//   private fun hasPermissions() : Boolean{
+//     if (context == null) return false
+    
+//     return !(
+//       ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED ||
+//       ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
+//       !isAccessibilityServiceEnabled(context!!)
+//     )
+//   }
+
+//   private fun requestPermissions(){
+//     if (context == null || activity == null) return
+    
+//     if(!isAccessibilityServiceEnabled(context!!)) {
+//       val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+//       intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//       context!!.startActivity(intent)
 //     }
 
-//     private fun requestPermissions(){
-//         if(!isAccessibilityServiceEnabled(this.context!!)) {
-//             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-//             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-//             this.context!!.startActivity(intent)
-
-//         }
-
-//         if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-//             if (!ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.CALL_PHONE)) {
-//                 ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.CALL_PHONE), 2)
-//             }
-//         }
-
-//         if (ContextCompat.checkSelfPermission(this.context!!, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-//             if (!ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.READ_PHONE_STATE)) {
-//                 ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.READ_PHONE_STATE), 2)
-//             }
-//         }
-
+//     if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+//       if (!ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.CALL_PHONE)) {
+//         ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.CALL_PHONE), 2)
+//       }
 //     }
+
+//     if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+//       if (!ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.READ_PHONE_STATE)) {
+//         ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.READ_PHONE_STATE), 2)
+//       }
+//     }
+//   }
 
 //   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
 //     channel.setMethodCallHandler(null)
+//     basicMessageChannel.setMessageHandler(null)
 //   }
 
 //   private class RequestExecutionException internal constructor(override var message: String) :
@@ -230,18 +244,17 @@
 //     }
 //   }
 
-
-
-
 //   // for android 8+
 //   private fun singleSessionUssd(ussdCode:String, subscriptionId:Int) : CompletableFuture<String>?{
-//     // use defaulft sim
+//     if (context == null || activity == null) return null
+    
+//     // use default sim
 //     val _useDefault: Boolean = subscriptionId == -1
 
 //     if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
 //       var res:CompletableFuture<String> = CompletableFuture<String>()
 //       // check permissions
-//       if (ContextCompat.checkSelfPermission(this.context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+//       if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
 //         if (ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.CALL_PHONE)) {
 //         } else {
 //           ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.CALL_PHONE), 2)
@@ -249,7 +262,7 @@
 //       }
 
 //       // get TelephonyManager
-//       val tm = this.context!!.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+//       val tm = context!!.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
 //       val simManager: TelephonyManager = tm.createForSubscriptionId(subscriptionId)
 
@@ -285,7 +298,6 @@
 //           callback,
 //           Handler(Looper.getMainLooper())
 //         )
-
 //       }else{
 //         simManager.sendUssdRequest(
 //           ussdCode,
@@ -294,24 +306,26 @@
 //         )
 //       }
 
-
 //       return res
 //     }else{
 //       // if sdk is less than 26
 //       defaultUssdService(ussdCode, subscriptionId)
-//       return  null
+//       return null
 //     }
-
 //   }
 
 //   private fun multisessionUssd(ussdCode:String, subscriptionId:Int, @NonNull result: Result){
+//     if (context == null || activity == null) {
+//       result.error("NO_CONTEXT", "Context or activity is not available", null)
+//       return
+//     }
+    
 //     var slot = subscriptionId
 //     if(subscriptionId == -1){
 //       slot = 0
 //     }
 
 //     ussdApi.callUSSDInvoke(activity!!, ussdCode, slot, object : USSDController.CallbackInvoke {
-
 //       override fun responseInvoke(ev: AccessibilityEvent) {
 //         event = AccessibilityEvent.obtain(ev)
 //         setListener()
@@ -319,11 +333,12 @@
 //         try {
 //           if(ev.text.isNotEmpty()) {
 //             result.success(java.lang.String.join("\n", ev.text))
-// //            result.success(ev.text.first().toString())
 //           }else{
 //             result.success(null)
 //           }
-//         }catch (e: Exception){}
+//         }catch (e: Exception){
+//           result.success(null)
+//         }
 //       }
 
 //       override fun over(message: String) {
@@ -331,15 +346,16 @@
 //           basicMessageChannel.send(message)
 //           result.success(message)
 //           basicMessageChannel.setMessageHandler(null)
-//         }catch (e: Exception){}
-
+//         }catch (e: Exception){
+//           result.success(null)
+//         }
 //       }
 //     })
 //   }
 
 //   private fun multisessionUssdCancel(){
 //     if(event != null){
-//       ussdApi.cancel2(event!!);
+//       ussdApi.cancel2(event!!)
 //       basicMessageChannel.setMessageHandler(null)
 //     }
 //   }
@@ -364,64 +380,66 @@
 //   )
 
 //   // multiple for all
-//   private fun defaultUssdService(ussdCode:String, subscriptionId:Int){
-//     if (ContextCompat.checkSelfPermission(this.context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+//   private fun defaultUssdService(ussdCode:String, subscriptionId:Int): String? {
+//     if (context == null || activity == null) return null
+    
+//     if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
 //       if (ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.CALL_PHONE)) {
 //       } else {
 //         ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.CALL_PHONE), 2)
 //       }
+//       return null
 //     }
+    
 //     try {
-//       // use defaulft sim
+//       // use default sim
 //       val _useDefault: Boolean = subscriptionId == -1
 
-//       val sim:Int = subscriptionId -1
-//       var number:String = ussdCode;
-//       number = number.replace("#", "%23");
+//       val sim:Int = subscriptionId - 1
+//       var number:String = ussdCode
+//       number = number.replace("#", "%23")
 //       if (!number.startsWith("tel:")) {
-//         number = String.format("tel:%s", number);
+//         number = String.format("tel:%s", number)
 //       }
 //       val intent =
 //         Intent(if (isTelephonyEnabled()) Intent.ACTION_CALL else Intent.ACTION_VIEW)
 //       intent.data = Uri.parse(number)
 
-//       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
+//       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
 //       if(!_useDefault){
-//         intent.putExtra("com.android.phone.force.slot", true);
-//         intent.putExtra("Cdma_Supp", true);
+//         intent.putExtra("com.android.phone.force.slot", true)
+//         intent.putExtra("Cdma_Supp", true)
 
 //         for (s in simSlotName) intent.putExtra(s, sim)
 
 //         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-//           if (ContextCompat.checkSelfPermission(this.context!!, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+//           if (ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
 //             if (ActivityCompat.shouldShowRequestPermissionRationale(activity!!, android.Manifest.permission.READ_PHONE_STATE)) {
 //             } else {
 //               ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.READ_PHONE_STATE), 2)
 //             }
 //           }
-//           val telecomManager = this.context!!.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+//           val telecomManager = context!!.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
 
 //           val phoneAccountHandleList = telecomManager.callCapablePhoneAccounts
 //           if (phoneAccountHandleList != null && phoneAccountHandleList.isNotEmpty())
 //             intent.putExtra("android.telecom.extra.PHONE_ACCOUNT_HANDLE",
 //               phoneAccountHandleList[sim]
-//             );
+//             )
 //         }
 //       }
 
-
-//       this.context!!.startActivity(intent)
+//       context!!.startActivity(intent)
+//       return "success"
 
 //     } catch (e: Exception) {
-//       throw e
+//       return null
 //     }
 //   }
 
 //   private fun isAccessibilityServiceEnabled(context: Context): Boolean{
-//     var accessibilityEnabled: Boolean
-//     accessibilityEnabled = false
+//     var accessibilityEnabled = false
 //     val service = "com.phan_tech.ussd_advanced.USSDServiceKT"
 //     val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
 //     val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityEvent.TYPES_ALL_MASK)
@@ -433,20 +451,15 @@
 //       }
 //     }
 //     return accessibilityEnabled
-
 //   }
 
 //   private fun isTelephonyEnabled(): Boolean {
-//     val tm = this.context!!.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+//     if (context == null) return false
+    
+//     val tm = context!!.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 //     return tm.phoneType != TelephonyManager.PHONE_TYPE_NONE
-
 //   }
-
-
-
-
 // }
-
 package com.phan_tech.ussd_advanced
 
 import android.app.Activity
@@ -476,6 +489,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.StringCodec
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** UssdAdvancedPlugin */
 class UssdAdvancedPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, BasicMessageChannel.MessageHandler<String?>  {
@@ -774,29 +788,40 @@ class UssdAdvancedPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Basic
       slot = 0
     }
 
+    // Add this flag to track if result has been sent
+    val resultSent = AtomicBoolean(false)
+
     ussdApi.callUSSDInvoke(activity!!, ussdCode, slot, object : USSDController.CallbackInvoke {
       override fun responseInvoke(ev: AccessibilityEvent) {
         event = AccessibilityEvent.obtain(ev)
         setListener()
 
         try {
-          if(ev.text.isNotEmpty()) {
+          if(ev.text.isNotEmpty() && !resultSent.getAndSet(true)) {
             result.success(java.lang.String.join("\n", ev.text))
-          }else{
+          } else if (!resultSent.get()) {
+            resultSent.set(true)
             result.success(null)
           }
-        }catch (e: Exception){
-          result.success(null)
+        } catch (e: Exception){
+          if (!resultSent.getAndSet(true)) {
+            result.success(null)
+          }
         }
       }
 
       override fun over(message: String) {
         try {
           basicMessageChannel.send(message)
-          result.success(message)
+          // Only send result if it hasn't been sent yet
+          if (!resultSent.getAndSet(true)) {
+            result.success(message)
+          }
           basicMessageChannel.setMessageHandler(null)
-        }catch (e: Exception){
-          result.success(null)
+        } catch (e: Exception){
+          if (!resultSent.getAndSet(true)) {
+            result.success(null)
+          }
         }
       }
     })
